@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, FlatList, TextInput, Button, Alert, TouchableOpacity, Modal } from 'react-native';
+import { useRouter } from 'expo-router'; // IMPORTANT: useRouter for navigation
 
 // Define the TypeScript interface for a Task
 interface Task {
-  id: string; // A unique identifier for the task, useful for list rendering and future operations.
-  title: string; // The title of the task.
-  description: string; // A detailed description of the task.
-  status: 'pending' | 'completed'; // The current status of the task. Limited to 'pending' or 'completed'.
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'completed';
 }
 
 // Hard-coded mock data for tasks
@@ -18,7 +19,7 @@ const mockTasks: Task[] = [
   { id: '5', title: 'Refactor Code for Readability', description: 'Improve code organization and use meaningful names.', status: 'pending' },
 ];
 
-export default function App() {
+export default function Page() { // Expo Router uses 'Page' for screen components
   const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [newTaskTitle, setNewTaskTitle] = useState<string>('');
   const [newTaskDescription, setNewTaskDescription] = useState<string>('');
@@ -26,6 +27,7 @@ export default function App() {
   const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false); // State to control modal visibility
   const [currentEditingTask, setCurrentEditingTask] = useState<Task | null>(null); // State to hold the task being edited
 
+  const router = useRouter(); // Initialize router for navigation from this screen
 
   const handleAddTask = () => {
     if (newTaskTitle.trim() === '') {
@@ -44,7 +46,7 @@ export default function App() {
     setTasks([...tasks, newTask]);
     setNewTaskTitle('');
     setNewTaskDescription('');
-  }; 
+  };
 
   // Function to toggle a task's status (pending/completed)
   const handleToggleTaskStatus = (taskId: string) => {
@@ -78,7 +80,6 @@ export default function App() {
       { cancelable: true }
     );
   };
-
 
   // Function to open the edit modal and set the task to be edited
   const handleEditTask = (task: Task) => {
@@ -114,8 +115,16 @@ export default function App() {
 
   // This function tells FlatList how to render each individual task item.
   const renderTaskItem = ({ item }: { item: Task }) => (
-    <View style={styles.taskItem}>
+    // Wrap the entire task item in TouchableOpacity for navigation to detail screen
+    <TouchableOpacity
+      style={styles.taskItem} // This style is for the whole item container
+      onPress={() => router.push({ // Navigate to the detail screen on press
+        pathname: `/detail`, // Path to your detail screen (app/detail.tsx)
+        params: { id: item.id, title: item.title, description: item.description, status: item.status }
+      })}
+    >
       <View style={styles.taskItemContent}>
+        {/* This inner TouchableOpacity handles toggling task status */}
         <TouchableOpacity onPress={() => handleToggleTaskStatus(item.id)} style={styles.taskTextContainer}>
           <Text style={[
             styles.taskTitle,
@@ -127,22 +136,17 @@ export default function App() {
           <Text style={styles.taskStatus}>Status: {item.status === 'completed' ? 'Completed' : 'Pending'}</Text>
         </TouchableOpacity>
         <View style={styles.taskActions}>
-          {/* Add an Edit button */}
-          <Button title="Edit" onPress={() => handleEditTask(item)} color="#007bff" /> {/* Blue color for edit */}
-          <View style={{ width: 10 }} /> {/* Spacer between buttons */}
-          {/* Existing Delete button */}
+          <Button title="Edit" onPress={() => handleEditTask(item)} color="#007bff" />
+          <View style={{ width: 10 }} />
           <Button title="Delete" onPress={() => handleDeleteTask(item.id)} color="#ff3b30" />
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      {/* Header for the task list */}
       <Text style={styles.header}>My Personal Tasks</Text>
-
-      {/* Task Input Form Section */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.textInput}
@@ -155,25 +159,23 @@ export default function App() {
           placeholder="Task Description"
           value={newTaskDescription}
           onChangeText={setNewTaskDescription}
-          multiline // Allow multiple lines for description
+          multiline
         />
         <Button title="Add Task" onPress={handleAddTask} />
       </View>
 
-      {/* FlatList component to render the list of tasks */}
       <FlatList
-        data={tasks} // The array of data to display
-        renderItem={renderTaskItem} // The function that renders each item in the list
-        keyExtractor={(item) => item.id} // A function to extract a unique key for each item, crucial for performance
-        contentContainerStyle={styles.listContent} // Apply padding to the content inside the FlatList
+        data={tasks}
+        renderItem={renderTaskItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
       />
 
-      {/* Edit Task Modal */}
       <Modal
-        animationType="slide" // Slide from bottom
-        transparent={true} // Allow background to be semi-transparent
-        visible={isEditModalVisible} // Control visibility with state
-        onRequestClose={() => { // Required for Android back button handling
+        animationType="slide"
+        transparent={true}
+        visible={isEditModalVisible}
+        onRequestClose={() => {
           setIsEditModalVisible(false);
           setCurrentEditingTask(null);
           setNewTaskTitle('');
@@ -184,13 +186,13 @@ export default function App() {
           <View style={styles.modalView}>
             <Text style={styles.modalTitle}>Edit Task</Text>
             <TextInput
-              style={styles.textInput} // Reusing the same text input style
+              style={styles.textInput}
               placeholder="Task Title"
               value={newTaskTitle}
               onChangeText={setNewTaskTitle}
             />
             <TextInput
-              style={styles.textInput} // Reusing the same text input style
+              style={styles.textInput}
               placeholder="Task Description"
               value={newTaskDescription}
               onChangeText={setNewTaskDescription}
@@ -205,10 +207,10 @@ export default function App() {
                   setNewTaskTitle('');
                   setNewTaskDescription('');
                 }}
-                color="#6c757d" // Gray color for cancel
+                color="#6c757d"
               />
-              <View style={{ width: 10 }} /> {/* Spacer */}
-              <Button title="Save" onPress={handleSaveEditedTask} color="#28a745" /> {/* Green color for save */}
+              <View style={{ width: 10 }} />
+              <Button title="Save" onPress={handleSaveEditedTask} color="#28a745" />
             </View>
           </View>
         </View>
@@ -217,25 +219,26 @@ export default function App() {
   );
 }
 
+// Styles for the main screen (index.tsx)
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Makes the container take up all available space.
-    backgroundColor: '#f5f5f5', // A light gray background for the entire screen.
-    paddingTop: 50, // Adds padding at the top to avoid content being obscured by the status bar.
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    paddingTop: 50,
   },
   header: {
-    fontSize: 28, // Large font size for the header.
-    fontWeight: 'bold', // Bold text.
-    textAlign: 'center', // Center align the text.
-    marginVertical: 20, // Vertical margin above and below the header.
-    color: '#333', // Dark gray text color.
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: '#333',
   },
   inputContainer: {
     padding: 15,
     backgroundColor: '#ffffff',
     marginBottom: 20,
     borderRadius: 10,
-    marginHorizontal: 15, // Match list padding
+    marginHorizontal: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -248,43 +251,43 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
-    marginBottom: 10, // Space between inputs
+    marginBottom: 10,
     backgroundColor: '#fefefe',
     fontSize: 16,
   },
   listContent: {
-    paddingHorizontal: 15, // Horizontal padding for the content inside the FlatList.
+    paddingHorizontal: 15,
   },
   taskItem: {
-    backgroundColor: '#ffffff', // White background for each task item.
-    padding: 15, // Internal padding within each task item.
-    marginVertical: 8, // Vertical margin between task items.
-    borderRadius: 10, // Rounded corners for the task item card.
-    shadowColor: '#000', // Shadow color for iOS.
-    shadowOffset: { width: 0, height: 2 }, // Shadow offset for iOS.
-    shadowOpacity: 0.1, // Shadow opacity for iOS.
-    shadowRadius: 3, // Shadow blur radius for iOS.
-    elevation: 3, // Elevation for Android (creates a shadow effect).
+    backgroundColor: '#ffffff',
+    padding: 15,
+    marginVertical: 8,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  taskItemContent: { // Style for task item layout to hold text and action buttons
+  taskItemContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  taskTextContainer: { // Style for the text area of the task item
-    flex: 1, // Allows text to take available space
-    marginRight: 10, // Space between text and action buttons
+  taskTextContainer: {
+    flex: 1,
+    marginRight: 10,
   },
-  taskActions: { // Style for task action buttons container
-    flexDirection: 'row', // Arrange buttons horizontally
-    alignItems: 'center', // Vertically align buttons
+  taskActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   taskTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
-  completedTaskTitle: { // Style for completed tasks (strike-through)
+  completedTaskTitle: {
     textDecorationLine: 'line-through',
     color: '#999',
   },
@@ -300,12 +303,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#007bff',
   },
-  // --- New Styles for Modal ---
   centeredView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent black background overlay
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalView: {
     margin: 20,
@@ -321,8 +323,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    width: '90%', // Modal takes 90% of screen width
-    maxHeight: '80%', // Max height for modal content
+    width: '90%',
+    maxHeight: '80%',
   },
   modalTitle: {
     fontSize: 22,
@@ -334,8 +336,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
-    width: '100%', // Buttons take full width of modal
-    paddingHorizontal: 10, // Padding for buttons
+    width: '100%',
+    paddingHorizontal: 10,
   },
-  // --- End New Styles for Modal ---
 });
